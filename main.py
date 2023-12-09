@@ -1,6 +1,8 @@
 import tkinter as tk
 from tkinter import font
 from tkinter import filedialog
+from tkinter import messagebox as mb
+import os
 
 class App(tk.Frame):
     def __init__(self, master):
@@ -24,26 +26,31 @@ class App(tk.Frame):
 
         font1 = font.Font(family="Ubuntu Mono", size=10)
         self.text_field = tk.Text(master, bd=5, font=font1, wrap="word")
-        self.text_field.pack(anchor='nw')
+        self.text_field.pack(anchor='w')
         self.text_field.insert(0.0, 'There is no text')
         self.text_field.config(state='disabled')
 
         font1 = font.Font(family="Ubuntu Mono", size=10)
         self.text_field_new = tk.Text(master, bd=5, font=font1, wrap="word")
-        self.text_field_new.pack(anchor='nw')
+        self.text_field_new.pack(anchor='w')
         self.text_field_new.config(state='disabled')
 
     def browse_file(self, ):
-        file_text = filedialog.askopenfilename()
-        with open(file_text, encoding='utf-8') as f:
-            try:
-                text = f.read()
-                self.text_field.config(state='normal')
-                self.text_field.delete(0.0, 1000.1000)
-                self.text_field.insert(0.0, text)
-                self.text_field.config(state='disabled')
-            except Exception as e:
-                print('Error:', e)
+        file_dir = filedialog.askopenfilename(title="Выбор файла", initialdir=os.path.curdir, defaultextension='txt',  filetypes=(("TXT files", "*.txt"),
+                                                                                                                                  ("All files", "*.*"),))
+        try:
+            with open(file_dir, encoding='utf-8') as f:
+                try:
+                    text = f.read()
+                    self.text_field.config(state='normal')
+                    self.text_field.delete(0.0, 'end')
+                    self.text_field.insert(0.0, text)
+                    self.text_field.config(state='disabled')
+                except UnicodeDecodeError:
+                    mb.showwarning("ERROR", message='Не поддерживаемый тип файла или в нём кодировка не utf-8')
+        except FileNotFoundError:
+            if file_dir != '':
+                mb.showwarning("ERROR", message=f'Не найдена директория {file_dir}')
 
 
     def encode(self):
