@@ -18,7 +18,7 @@ class App(tk.Frame):
         self.encode_button = tk.Button(self.frm, text='Кодирование текста', command=self.encode, bd=5)
         self.encode_button.pack(side='left', padx=3)
 
-        self.decode_button = tk.Button(self.frm, text='Декодирование текста', command=self.encode, bd=5)
+        self.decode_button = tk.Button(self.frm, text='Декодирование текста', command=self.decode, bd=5)
         self.decode_button.pack(side='left', padx=3)
 
         self.save_button = tk.Button(self.frm, text='Сохранить результат', command=self.save_data, bd=5)
@@ -54,13 +54,32 @@ class App(tk.Frame):
 
 
     def encode(self):
-        pass
+        probability = self.generate_probabilities()
+
 
     def decode(self):
         pass
 
     def save_data(self):
         pass
+
+    def generate_probabilities(self):
+        text = self.text_field.get(0.0, 'end')
+        lenText = len(text)
+        probability = []
+        alph = {}
+        for w in text:
+            if w in alph:
+                alph[w] += 1
+            else:
+                alph[w] = 1
+        for i, w in enumerate(alph.keys()):
+            probability.append((w, alph[w] / lenText))
+        probability.sort(key=lambda x: x[1], reverse=True)
+        return probability
+
+
+
 
 root = tk.Tk()
 root.title("Архиватор")
