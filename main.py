@@ -61,10 +61,14 @@ class App(tk.Frame):
                         self.text_field.insert(0.0, self.text)
                     self.text_field.config(state='disabled')
                     f.close()
+                    self.text_field_new.config(state='normal')
+                    self.text_field_new.delete(0.0, 'end')
+                    self.text_new = ''
+                    self.text_field.config(state='disabled')
                     break
                 except UnicodeDecodeError as e:
                     if codec == codecs[-1]:
-                        mb.showwarning("ERROR", message='Не поддерживаемый тип файла или в нём кодировка не utf-8')
+                        mb.showwarning("ERROR", message='Не поддерживаемый тип файла или в нём не поддерживаемая кодировка')
                         print(e)
                     else:
                         continue
@@ -72,100 +76,117 @@ class App(tk.Frame):
             if file_dir != '':
                 mb.showwarning("ERROR", message=f'Не найдена директория {file_dir}')
             print(e)
+        except BaseException as e:
+            mb.showwarning("ERROR", message='Произошла непредвиденная ошибка')
+            print(e)
 
     def encode(self):
-        self.alph = {}
-        self.need_alph = True
+        try:
+            self.alph = {}
+            self.need_alph = True
 
-        def create_code(sequence, num=None):
-            if num is not None:
-                for letter in sequence:
-                    if letter in self.alph:
-                        self.alph[letter] += num
+            def create_code(sequence, num=None):
+                if num is not None:
+                    for letter in sequence:
+                        if letter in self.alph:
+                            self.alph[letter] += num
+                        else:
+                            self.alph[letter] = num
+                index = 1
+                sum_left = round(probability[0][1], 10)
+                sum_right = round((sum((x[1] for x in probability[1: len(sequence)]))), 10)
+                if sum_left < sum_right:
+                    while sum_right > sum_left and index < len(sequence):
+                        sum_left = round(sum_left + probability[index][1], 10)
+                        sum_right = round(sum_right - probability[index][1], 10)
+                        index += 1
+                        if sum_left > sum_right:
+                            index -= 1
+                            sum_left = round(sum_left - probability[index][1], 10)
+                            sum_right = round(sum_right + probability[index][1], 10)
+                            break
+                sequence1 = sequence[0: index]
+                sequence2 = sequence[index: len(sequence)]
+                if len(sequence1) > 1:
+                    create_code(sequence1, '1')
+                else:
+                    if sequence1[0] in self.alph:
+                        self.alph[sequence1[0]] += '1'
                     else:
-                        self.alph[letter] = num
-            index = 1
-            sum_left = round(probability[0][1], 10)
-            sum_right = round((sum((x[1] for x in probability[1: len(sequence)]))), 10)
-            if sum_left < sum_right:
-                while sum_right > sum_left and index < len(sequence):
-                    sum_left = round(sum_left + probability[index][1], 10)
-                    sum_right = round(sum_right - probability[index][1], 10)
-                    index += 1
-                    if sum_left > sum_right:
-                        index -= 1
-                        sum_left = round(sum_left - probability[index][1], 10)
-                        sum_right = round(sum_right + probability[index][1], 10)
-                        break
-            sequence1 = sequence[0: index]
-            sequence2 = sequence[index: len(sequence)]
-            if len(sequence1) > 1:
-                create_code(sequence1, '1')
-            else:
-                if sequence1[0] in self.alph:
-                    self.alph[sequence1[0]] += '1'
+                        self.alph[sequence1[0]] = '1'
+                if len(sequence2) > 1:
+                    create_code(sequence2, '0')
                 else:
-                    self.alph[sequence1[0]] = '1'
-            if len(sequence2) > 1:
-                create_code(sequence2, '0')
-            else:
-                if sequence2[0] in self.alph:
-                    self.alph[sequence2[0]] += '0'
-                else:
-                    self.alph[sequence2[0]] = '0'
+                    if sequence2[0] in self.alph:
+                        self.alph[sequence2[0]] += '0'
+                    else:
+                        self.alph[sequence2[0]] = '0'
 
-        probability = self.generate_probabilities()
-        seq = [word[0] for word in probability]
-        create_code(seq)
-        self.text_field_new.config(state='normal')
-        self.text_field_new.delete(0.0, 'end')
-        self.text_new = ''
-        for w in self.text:
-            self.text_new += self.alph[w]
-        if len(self.text_new) > 5000:
-            self.text_field_new.insert(0.0, self.text_new[:5000] + '...')
-        else:
-            self.text_field_new.insert(0.0, self.text_new)
-        self.text_field_new.config(state='disabled')
+            probability = self.generate_probabilities()
+            seq = [word[0] for word in probability]
+            create_code(seq)
+            self.text_field_new.config(state='normal')
+            self.text_field_new.delete(0.0, 'end')
+            self.text_new = ''
+            for w in self.text:
+                self.text_new += self.alph[w]
+            if len(self.text_new) > 5000:
+                self.text_field_new.insert(0.0, self.text_new[:5000] + '...')
+            else:
+                self.text_field_new.insert(0.0, self.text_new)
+            self.text_field_new.config(state='disabled')
+        except BaseException as e:
+            mb.showwarning("ERROR", message='Произошла непредвиденная ошибка')
+            print(e)
 
     def decode(self):
-        text = self.text
-        self.need_alph = False
-        text_decode = ''
-        seq = ''
-        end_of_alph = text.find('}')
-        alph = {k[1:-1]: v[1:-1] for v, k in [s.split(': ') for s in text[1:end_of_alph].split(', ')]}
-        print(alph)
-        text = text[end_of_alph+2:]
-        print(text)
-        for w in text:
-            seq += w
-            if seq in alph:
-                word = alph[seq] if alph[seq] != '\\n' else '\n'
-                text_decode += word
-                seq = ''
-        print(text_decode)
-        self.text_field_new.config(state='normal')
-        self.text_field_new.delete(0.0, 'end')
-        self.text_new = text_decode
-        if len(self.text_new) > 5000:
-            self.text_field_new.insert(0.0, self.text_new[:5000] + '...')
-        else:
-            self.text_field_new.insert(0.0, self.text_new)
-        self.text_field_new.config(state='disabled')
+        try:
+            text = self.text
+            self.need_alph = False
+            text_decode = ''
+            seq = ''
+            end_of_alph = text.find('}')
+            if text[end_of_alph+1] == "'":
+                end_of_alph = end_of_alph + text[end_of_alph + 1:].find('}') + 1
+            alph = {k[1:-1]: v[1:-1] for v, k in [s.split(': ') for s in text[1:end_of_alph].split(', ')]}
+            text = text[end_of_alph+2:]
+            for w in text:
+                seq += w
+                if seq in alph:
+                    word = alph[seq] if alph[seq] != '\\n' else '\n'
+                    text_decode += word
+                    seq = ''
+            self.text_field_new.config(state='normal')
+            self.text_field_new.delete(0.0, 'end')
+            self.text_new = text_decode
+            if len(self.text_new) > 5000:
+                self.text_field_new.insert(0.0, self.text_new[:5000] + '...')
+            else:
+                self.text_field_new.insert(0.0, self.text_new)
+            self.text_field_new.config(state='disabled')
+        except ValueError as e:
+            print(e)
+            mb.showwarning(title='ERROR', message='Файл нельзя декодировать')
+        except BaseException as e:
+            mb.showwarning("ERROR", message='Произошла непредвиденная ошибка')
+            print(e)
 
     def save_data(self,):
-        f = filedialog.asksaveasfile(mode='w',
-                                     initialfile='Decode.txt',
-                                     title="Cохранение файла",
-                                     initialdir=os.path.curdir,
-                                     defaultextension='.txt',
-                                     filetypes=(("TXT files", "*.txt"), ("All files", "*.*"), ))
-        if f is None:
-            return
-        text_for_save = str(self.alph) + '\n' + self.text_new if self.need_alph else self.text_new
-        f.write(text_for_save)
-        f.close()
+        try:
+            f = filedialog.asksaveasfile(mode='w',
+                                         initialfile='Decode.txt',
+                                         title="Cохранение файла",
+                                         initialdir=os.path.curdir,
+                                         defaultextension='.txt',
+                                         filetypes=(("TXT files", "*.txt"), ("All files", "*.*"), ))
+            if f is None:
+                return
+            text_for_save = str(self.alph) + '\n' + self.text_new if self.need_alph else self.text_new
+            f.write(text_for_save)
+            f.close()
+        except BaseException as e:
+            mb.showwarning("ERROR", message='Произошла непредвиденная ошибка')
+            print(e)
 
     def generate_probabilities(self):
         text = self.text
@@ -184,7 +205,7 @@ class App(tk.Frame):
 
 
 root = tk.Tk()
-root.title("Архиватор")
+root.title("Кодировщик")
 root.minsize(525, 400)
 root.geometry('600x800')
 root.iconphoto(False, tk.PhotoImage(file="icon.png"))
